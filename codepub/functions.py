@@ -1091,7 +1091,7 @@ def rca(n_pools, iters, len_lst):
     n = n_pools
 
 
-    directory='/Users/hmeyer/peptide_pooling/src/copepodtcr/copepodTCR/short_sequences_txt'
+    directory='data'
     filepath=find_path(n - 1, iters-1, directory)
     S1_0 = np.loadtxt(filepath, dtype='int')
     M1, _ = S1_0.shape  

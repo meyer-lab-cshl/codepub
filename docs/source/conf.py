@@ -17,13 +17,13 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'copepodTCR'
-copyright = '2023, Vasilisa Kovaleva'
-author = 'Vasilisa Kovaleva'
+project = 'CodePUB'
+copyright = '2023, Vasilisa Kovaleva, Guanchen He'
+author = '2023, Vasilisa Kovaleva, Guanchen He'
 
 # The full version, including alpha/beta/rc tags
-version = '0.1.5'
-release = '0.1.5'
+version = '0.0.1'
+release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 
@@ -48,9 +48,9 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-html_logo = "logo.svg"
+#html_logo = "logo.svg"
 html_theme_options = {
-    'logo_only': True,
+    'logo_only': False,
     'display_version': True,
 }
 
