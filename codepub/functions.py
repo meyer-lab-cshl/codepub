@@ -2,12 +2,18 @@
 # coding: utf-8
 
 import os
+# Get the path of the current module
+current_module_path = os.path.dirname(__file__)
+# Define the path to your data directory
+data_directory = os.path.join(current_module_path, 'data')
+
 import numpy as np
 import math
 from itertools import combinations
 import cvxpy as cp
 import random
 import sys
+from fnmatch import fnmatch
 
 
 # # Functions for ITERS search
@@ -1090,14 +1096,12 @@ def rca(n_pools, iters, len_lst):
     weights = weights0
     n = n_pools
 
-
-    directory='data'
-    filepath=find_path(n - 1, iters-1, directory)
+    filepath=find_path(n - 1, iters-1, data_directory)
     S1_0 = np.loadtxt(filepath, dtype='int')
     M1, _ = S1_0.shape  
     B = (n-1) * np.ones((M1, 1), dtype='int')
     S1_0 = np.concatenate([S1_0, B], axis=1)
-    filepath=find_path(n - 2, iters-1, directory)
+    filepath=find_path(n - 2, iters-1, data_directory)
     S2_0 = np.loadtxt(filepath, dtype='int')
     M2, _ = S2_0.shape
     B = (n-2) * np.ones((M2, 1), dtype='int')
@@ -1143,7 +1147,7 @@ def rca(n_pools, iters, len_lst):
 
             # (n-i)-th level concatenation
             for i in range(n - 3, n0 - 1, -1):
-                filepath=find_path(i, iters-1, directory)
+                filepath=find_path(i, iters-1, data_directory)
                 Si_0 = np.loadtxt(filepath, dtype='int')
                 Mi, _ = Si_0.shape
                 B = i * np.ones((Mi, 1), dtype='int')
@@ -1185,7 +1189,7 @@ def rca(n_pools, iters, len_lst):
 
 
             M_last = int(np.sum(weights) / iters)
-            filepath=find_path(n0, iters, directory)
+            filepath=find_path(n0, iters, data_directory)
             S0_0 = np.loadtxt(filepath, dtype='int')
             M0, _ = S0_0.shape
             bs = bAU_search(S_out, len(weights0), nums)
