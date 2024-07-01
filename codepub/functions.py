@@ -852,6 +852,9 @@ def bba_au(n_pools, iters, len_lst, start_a = None, balance = None):
     Used in function(reccom), function(gen_elementary_sequence).
     """
 
+    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+        return [None, None]
+
     depth = len_lst*2+500
     sys.setrecursionlimit(depth)
 
@@ -896,6 +899,9 @@ def bba_a(n_pools, iters, len_lst):
     Is dependent on function(hamiltonian_path_A) and function(sum_bits).
     """
     
+    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+        return [None, None]
+
     depth = len_lst*2+500
     sys.setrecursionlimit(depth)
 
@@ -915,14 +921,16 @@ def bba_a(n_pools, iters, len_lst):
     arrangement = hamiltonian_path_A(G, len_lst, vertices[0])
     
     addresses = []
-    for item in arrangement:
-        address = []
-        for i in range(len(item)):
-            if item[i] == '1':
-                address.append(i)
-        addresses.append(address)
-    #print(sum_bits(arrangement))
-    return sum_bits(arrangement), addresses
+    if arrangement:
+        for item in arrangement:
+            address = []
+            for i in range(len(item)):
+                if item[i] == '1':
+                    address.append(i)
+            addresses.append(address)
+        return sum_bits(arrangement), addresses
+    else:
+        return [None, None]
 
 # # RCA
 
@@ -1084,6 +1092,10 @@ def rca(n_pools, iters, len_lst):
     Is dependent on function(bAU_search) and function(permutation_map), function(isGrayUnionDisjoint), function(find_path), function(item_per_pool).
     """
 
+    ## if there are not enough addresses and unions
+    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+        return [None, None]
+
     n_0 = [8,8,8,9,10,12,14,16]
     n0=n_0[iters-1]
     deviation_now=999
@@ -1239,7 +1251,10 @@ def rca(n_pools, iters, len_lst):
             else:
                 print("not GrayUnionDisjoint.")
 
-    return S_out_out
+    if S_out_out is not None:
+        balance = item_per_pool(S_out_out, n_pools)
+        S_out_out = [arr.tolist() for arr in S_out_out]
+    return balance, S_out_out
 
 
 def gen_elementary_sequence(n, iters, nums, m, b = None):
@@ -1428,6 +1443,10 @@ def rcau(n_pools, iters, len_lst):
     Is dependent on function(item_per_pool), function(reccom).
     
     """
+
+    ## if there are enough addresses and unions
+    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+        return [None, None]
     
     w=math.floor(iters*len_lst/n_pools)
     weights = w * np.ones((n_pools,), dtype='int')
@@ -1436,11 +1455,14 @@ def rcau(n_pools, iters, len_lst):
 
     nums = np.arange(0, n_pools)
     bs0 =  np.array(list(combinations(nums, iters)))
-    
+        
     S = reccom(n_pools, iters, len_lst, nums, weights, w_check = None, S=None)
     if S is not None:
         balance = item_per_pool(S, n_pools)
-    return balance, S
+        S = [arr.tolist() for arr in S]
+        return balance, S
+    else:
+        return [None, None]
 
 
 # # Check
