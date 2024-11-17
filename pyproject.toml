@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "codepub"
-version = "1.4"
+version = "1.6"
 authors = [
   { name="Vasilisa Kovaleva", email="vasilisa.kovaliova@gmail.com" },
   { name="Guanchen He", email="hgc01@buaa.edu.cn" },
