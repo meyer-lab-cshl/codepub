@@ -1375,65 +1375,65 @@ def reccom(n, iters, len_lst, nums, weights, w_check = None, S=None):
     #bs = b_search(S, iters, nums)
     bs = bAU_search(S, n_pools, nums)
     # if b was found
-    if len(bs) > 0:
-        b_weights = dict()
-        for b in bs:
-            b_weights[tuple(b)] = new_weights[b[-1]]
-        b_weights = {k: v for k, v in sorted(b_weights.items(), key=lambda item: item[1], reverse=False)}
+    #if len(bs) > 0:
+    b_weights = dict()
+    for b in bs:
+        b_weights[tuple(b)] = new_weights[b[-1]]
+    b_weights = {k: v for k, v in sorted(b_weights.items(), key=lambda item: item[1], reverse=False)}
             
-        # n_pools reduction
-        n = n - 1
+    # n_pools reduction
+    n = n - 1
 
-        # last elementary sequence
-        if math.comb(n-1, iters) < math.comb(n-1, iters-1)+1:
-            left = len_lst - len(S)
-            for b in b_weights.keys():
-                
-                # calculating balance for BBA_AU
-                start_a = ''.join(['1']*iters + ['0']*(n-iters))
-                perm_vec = permute(list(range(iters)), b, n, nums)
-                bal_for_AU = AU_balance(new_weights, perm_vec)
-                # search for the arrangement with needed balance
-                _, A = bba_au(n, iters, left, start_a, bal_for_AU)
-            
-                if A is not None:
-                    A = np.array(A, dtype = 'int')
-                    S_j = permutation_map(A[::-1], -1, b, n, nums)
-                    if S_j is not None:
-                        S_new = np.concatenate([S_j, S], axis=0)
-                        
-                        return S_new
-
-        # for each b
+    # last elementary sequence
+    if math.comb(n-1, iters) < math.comb(n-1, iters-1)+1:
+        left = len_lst - len(S)
         for b in b_weights.keys():
-            m = b_weights[b]
-            av_ad = math.comb(n-1, iters-1)
-            av_un = math.comb(n-1, iters)
-            # if AU arrangement can be found
-            if m > 0 and m < av_un and av_ad - m > 1:
-                #if m is bigger than needed
-                if m > len_lst-len(S):
-                    m = len_lst-len(S)
-                S_j, nums_new = gen_elementary_sequence(n, iters, nums, m, b)
-                if S_j is not None:
-                    w_check = item_per_pool(S_j, len(weights))
-                    S_new = np.concatenate([S_j, S], axis=0)
-
-                    if len(S_new) == len_lst:
-                        return S_new
-
-                    # if arrangement needs only one next element
-                    elif len_lst-len(S_new) == 1:
-                        end = bAU_search(S_new, n_pools, nums_new)
-                        #end = b_search(S_new, iters, nums_new)
-                        if len(end)>0:
-                            b_S = np.concatenate([[end[0]], S_new], axis=0)
-                            return b_S
+                
+            # calculating balance for BBA_AU
+            start_a = ''.join(['1']*iters + ['0']*(n-iters))
+            perm_vec = permute(list(range(iters)), b, n, nums)
+            bal_for_AU = AU_balance(new_weights, perm_vec)
+            # search for the arrangement with needed balance
+            _, A = bba_au(n, iters, left, start_a, bal_for_AU)
             
-                    else:
-                        res_path = reccom(n, iters, len_lst, nums_new, new_weights, w_check, S_new)
-                        if res_path is not None:
-                            return res_path
+            if A is not None:
+                A = np.array(A, dtype = 'int')
+                S_j = permutation_map(A[::-1], -1, b, n, nums)
+                if S_j is not None:
+                    S_new = np.concatenate([S_j, S], axis=0)
+                        
+                    return S_new
+
+    # for each b
+    for b in b_weights.keys():
+        m = b_weights[b]
+        av_ad = math.comb(n-1, iters-1)
+        av_un = math.comb(n-1, iters)
+        # if AU arrangement can be found
+        if m > 0 and m < av_un and av_ad - m > 1:
+            #if m is bigger than needed
+            if m > len_lst-len(S):
+                m = len_lst-len(S)
+            S_j, nums_new = gen_elementary_sequence(n, iters, nums, m, b)
+            if S_j is not None:
+                w_check = item_per_pool(S_j, len(weights))
+                S_new = np.concatenate([S_j, S], axis=0)
+
+                if len(S_new) == len_lst:
+                    return S_new
+
+                # if arrangement needs only one next element
+                elif len_lst-len(S_new) == 1:
+                    end = bAU_search(S_new, n_pools, nums_new)
+                    #end = b_search(S_new, iters, nums_new)
+                    if len(end)>0:
+                        b_S = np.concatenate([[end[0]], S_new], axis=0)
+                        return b_S
+            
+                else:
+                    res_path = reccom(n, iters, len_lst, nums_new, new_weights, w_check, S_new)
+                    if res_path is not None:
+                        return res_path
 
 
 def rcau(n_pools, iters, len_lst):
