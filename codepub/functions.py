@@ -705,19 +705,20 @@ def variance_score(bit_sums, s, balance = None):
     Used in function(bba_au), function(bba_a)
     """
     
-    #if balance is None:
-    #    variance = np.var(bit_sums)
+    if balance is None:
+        variance = np.var(bit_sums)
 
     new_bit_sums = bit_sums[:]
     for i, bit in enumerate(s):
         new_bit_sums[i] += int(bit)
 
     if balance is None:
-        diff = np.array(bit_sums) - np.array(new_bit_sums)
-        penalty = np.var(diff)
+        new_variance = np.var(new_bit_sums)
+        penalty = new_variance - variance
     else:
-        diff = np.array(balance) - np.array(new_bit_sums)
-        penalty = np.var(diff)
+        variance = np.var(balance)
+        new_variance = np.var(new_bit_sums)
+        penalty = new_variance - variance
 
     return penalty
 
