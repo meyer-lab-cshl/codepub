@@ -716,9 +716,8 @@ def variance_score(bit_sums, s, balance = None):
         new_variance = np.var(new_bit_sums)
         penalty = new_variance - variance
     else:
-        variance = np.var(balance)
-        new_variance = np.var(new_bit_sums)
-        penalty = new_variance - variance
+        diff = np.array(balance) - np.array(new_bit_sums)
+        penalty = np.var(diff)
 
     return penalty
 
