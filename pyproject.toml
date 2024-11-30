@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "codepub"
-version = "1.9"
+version = "2.0"
 authors = [
   { name="Vasilisa Kovaleva", email="vasilisa.kovaliova@gmail.com" },
   { name="Guanchen He", email="hgc01@buaa.edu.cn" },
@@ -18,8 +18,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "numpy>=1.23.5,<2.0.0",
-    "cvxpy >= 1.3.2"
+    "numpy>=1.23.5",
 ]
 
 [project.urls]

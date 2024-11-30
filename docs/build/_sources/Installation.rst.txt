@@ -15,3 +15,7 @@ Or with conda:
 
 Requirements
 --------------------
+- numpy>=1.23.5
+	.. code-block:: python
+
+		pip install "numpy>=1.23.5"

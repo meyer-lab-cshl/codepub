@@ -10,19 +10,22 @@ data_directory = os.path.join(current_module_path, 'data')
 import numpy as np
 import math
 from itertools import combinations
-import cvxpy as cp
 import random
 import sys
 from fnmatch import fnmatch
 
-
-# # Functions for ITERS search
+# # Functions for R search
 
 def factorial(num):
 
     """
-    Returns factorial of the number.
-    Used in function(combination).
+    Calculates factorial of the given number.
+
+    Parameters:
+    - num (int) - given number
+
+    Returns:
+    - fact (int) - its factorial
     """
 
     if num == 0:
@@ -30,34 +33,45 @@ def factorial(num):
     else:
         return num * factorial(num-1)
 
-def combination(n, k):
+def combination(m, k):
 
     """
-    Returns number of possible combinations.
-    Is dependent on function(factorial)
-    Used in function(find_possible_k_values).
+    Finds number of possible combinations.
+    
+    Parameters:
+    - m (int) - number of pools
+    - k (int) - address weight
+
+    Returns:
+    - n (int) - maximum number of combinations given m and k
     """
 
-    return factorial(n) // (factorial(k) * factorial(n - k))
+    return factorial(m) // (factorial(k) * factorial(m - k))
 
-def find_possible_k_values(n, l):
+def find_possible_k_values(m, n):
 
     """
-    Returns possible iters given number of peptides (l) and number of pools (n).
-    Is dependent on function(combination).
+    Finds possible address weights r given number of pools m and number of items n
+
+    Parameters:
+    - m (int) - number of pools
+    - n (int) - number of items
+
+    Returns:
+    - k_values (list) - list with possible r
     """
 
     k_values = []
     k = 0
     
-    while k <= n:
-        c = combination(n, k)
-        if c >= l:
+    while k <= m:
+        c = combination(m, k)
+        if c >= n:
             break
         k += 1
 
-    while k <= n:
-        if combination(n, k) >= l:
+    while k <= m:
+        if combination(m, k) >= n:
             k_values.append(k)
         else:
             break
@@ -66,536 +80,21 @@ def find_possible_k_values(n, l):
     return k_values
 
 
-# # Gray codes functions
-
-
-def find_q_r(n):
-    
-    """
-    Solves an equation: what is an equal for partition for 2**n:
-    2**n = n*q + r
-    What is n?
-    Used in function(bgc).
-    """
-
-    q = cp.Variable(integer=True)
-    r = cp.Variable(integer=True)
-
-    constraints = [
-        2**n == n*q + r,
-        r >= 0,
-        r <= n-1
-    ]
-
-    problem = cp.Problem(cp.Minimize(r), constraints)
-
-    problem.solve()
-    
-    if problem.status == 'optimal':
-        return int(q.value), int(r.value)
-    
-def bgc(n, s = None):
-    
-    """
-    Balanced Gray codes construction.
-    Takes a transition sequence for a balanced Gray code with n-2 bits,
-    returns a transition sequence of n-bit BGC.
-    Is dependent on function(find_q_r).
-    Used in function(n_bgc)
-    """
-
-    ### Calculation of q, r
-    q, r = find_q_r(n=n)
-
-    ### Partition p_i
-    p_i = []
-
-    if q%2 == 0:
-        q_def = int(r/2)
-        if q_def != 0:
-            Q = list(range(1, n-1))[-q_def:]
-        else:
-            Q = []
-    
-        for i in range(n):
-            if i in Q:
-                p_i.append(q+2)
-            else:
-                p_i.append(q)
-    elif q%2 != 0:
-        q_def = int((n+r)/2)
-        if q_def != 0:
-            Q = list(range(1, n-1))[-q_def:]
-        else:
-            Q = []
-    
-        for i in range(n):
-            if i in Q:
-                p_i.append(q+1)
-            else:
-                p_i.append(q-1)
-            
-    p_i = sorted(p_i)
-
-    ### Calculation b_i
-    if s is None:
-        if n == 4:
-            s = [1, 2, 1, 2]
-        elif n == 5:
-            s = [1, 2, 3, 2, 1, 2, 3, 2]
-    b_i = []
-
-    for i in range(1, len(set(s))+1):
-        if i != s[len(s)-1]:
-            b = (4*s.count(i) - p_i[i-1])/2
-            b_i.append(int(b))
-        else:
-            b = (4*(s.count(i) - 1) - p_i[i-1])/2
-            b_i.append(int(b))
-    l = sum(b_i)
-
-    counts = dict()
-    for i in range(len(b_i)):
-        counts[i+1] = b_i[i]
-    
-    s = s[:-1]
-    u = []
-    t = []
-    new_counts = dict()
-    for i in range(1, n-1):
-        new_counts[i] = 0
-    for i in s:
-        if new_counts[i] >= counts[i]:
-            u[-1].append(i)
-        else:
-            t.append([i])
-            u.append([])
-        new_counts[i] += 1
-    n = n-2
-
-    s_2 = []
-
-    for t_i, u_i in zip(t, u):
-        s_2 = s_2 + t_i + u_i
-    s_2 = s_2 + [n+1]
-
-    row_count = 0
-    for i in range(len(u)-1, -1, -1):
-        if row_count == 0:
-            s_2 = s_2 + list(reversed(u[i])) + [n+2] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-            row_count = 1
-        else:
-            s_2 = s_2 + list(reversed(u[i])) + [n+1] + u[i] + [n+2] + list(reversed(u[i])) + t[i]
-            row_count = 0
-    if row_count == 0:
-        s_2 = s_2 + [n+2] + [n+1] + [n+2]
-    elif row_count == 1:
-        s_2 = s_2 + [n+1] + [n+2] + [n+1]
-
-    return s_2
-
-def n_bgc(n):
-    
-    """
-    Takes n and returns n-bit BGC.
-    Is dependent on function(bgc).
-    Used in function(m_length_BGC).
-    """
-    
-    if n == 2:
-        s_2 = [1, 2, 1, 2]
-        counter = 2
-    elif n == 3:
-        s_2 = [1, 2, 3, 2, 1, 2, 3, 2]
-        counter = 3
-    elif n >3 and n%2 == 0:
-        counter = 4
-        s_2 = bgc(n=counter)
-    elif n > 3 and n%2 != 0:
-        counter = 5
-        s_2 = bgc(n=counter)
-    while counter != n:
-        counter = counter + 2
-        s_2 = bgc(n=counter, s = s_2)
-        
-    balance = []
-    for item in set(s_2):
-        balance.append(s_2.count(item))
-        
-    #print(balance)
-    return s_2
-
-def computing_ab_i_odd(s_2, l, v):
-    
-    """
-    Used in special case of n-bit BGC construction with flexible length.
-    Used in function(m_length_BGC).
-    """
-    
-    ## How many values we need to add before s_r
-    E_v = int(np.floor((v-1)/3))
-    E_v = s_2[:E_v]
-        
-    ## Computing b_i
-    b_i = dict()
-    for i in range(n):
-        b_i[i] = 0
-        if i in E_v:
-            b_i[i] = E_v.count(i)
-            
-    inequalities = []
-    TC = dict()
-
-    ## How many a_i we need to compute:
-    a_i = []
-    for i in range(n):
-        a_i.append(cp.Variable(integer=True))
-
-    for i in range(n+2):
-        if l%2 == 0:
-            if i == n:
-                TC_i = l - cp.floor(v/3) + cp.ceil(((v+4)%6)/6)
-            elif i == n+1:
-                TC_i = l - cp.floor(v/3) + cp.ceil(((v+1)%6)/6)
-            elif i == s_2[-1]:
-                TC_i = 3*(s_2.count(i)-1) - 2*a_i[i] + b_i[i]
-            else:
-                TC_i = 3*s_2.count(i) - 2*a_i[i] + b_i[i]
-            TC[i] = TC_i
-        else:
-            if i == n:
-                TC_i = l - cp.floor(v/3) + cp.ceil(((v+1)%6)/6)
-            elif i == n+1:
-                TC_i = l - cp.floor(v/3) + cp.ceil(((v+4)%6)/6)
-            elif i == s_2[-1]:
-                TC_i = 3*(s_2.count(i)-1) - 2*a_i[i] + b_i[i]
-            else:
-                TC_i = 3*s_2.count(i) - 2*a_i[i] + b_i[i]
-            TC[i] = TC_i
-                
-    ## Solving the resulting inequalities for a_i
-    inequalities = []
-    for key1 in TC.keys():
-        for key2 in TC.keys():
-            if key1 != key2:
-                inequalities.append(-2 <= TC[key1] - TC[key2])
-                inequalities.append(TC[key1] - TC[key2] <= 2)
-    inequalities.append(sum(a_i) == l)
-    for i in range(len(a_i)):
-        inequalities.append(a_i[i] >= 0)
-        inequalities.append(a_i[i] <= l)
-
-    a_values = dict()
-    problem = cp.Problem(cp.Minimize(0), inequalities)
-    problem.solve()
-
-    if problem.status == 'optimal':
-        for i in range(len(a_i)):
-            a_values[i] = int(a_i[i].value)
-    
-    return [v, a_values, E_v]
-
-### Ready for both cases
-def m_length_BGC(m, n):
-    
-    """
-    Construction of n-bit BGC with flexible length from n-2 bit BGC.
-    Is dependent on function(computing_ab_i_odd) and function(n_bgc).
-    """
-    
-    n = n-2
-    s_2 = n_bgc(n = n)
-    s_2 = [x - 1 for x in s_2]
-    
-    ### if 3*2**n < m < 2**(n+2) (Case I)
-    if 3*2**n < m < 2**(n+2):
-        intervals = [np.floor(m/(n+2)) -3, np.floor(m/(n+2))]
-    
-        ## l is chosen from intervals
-        l_options = dict()
-        for l in list(range(int(intervals[0]), int(intervals[1]) + 1)):
-            ## How many values we need to add before s_r
-            u = m - 3*2**n
-            if l%2 == 0:
-                E_u = s_2[-l:][:-1]
-            elif l%2 != 0:
-                E_u = s_2[-l-1:][:-1]
-        
-            ## Computing b_i
-            b_i = dict()
-            for i in range(n):
-                b_i[i] = 0
-                if i in E_u:
-                    b_i[i] = E_u.count(i)
-
-            inequalities = []
-            TC = dict()
-
-            ## How many a_i we need to compute:
-            a_i = []
-            for i in range(n):
-                a_i.append(cp.Variable(integer=True))
-
-            for i in range(n+2):
-                if l%2 == 0:
-                    if i == n:
-                        TC_i = l + 2
-                    elif i == n+1:
-                        TC_i = l + 2
-                    elif i == s_2[-1]:
-                        TC_i = 3*(s_2.count(i)-1) - 2*a_i[i] + b_i[i]
-                    else:
-                        TC_i = 3*s_2.count(i) - 2*a_i[i] + b_i[i]
-                    TC[i] = TC_i
-                else:
-                    if i == n:
-                        TC_i = l + 2
-                    elif i == n+1:
-                        TC_i = l + 1
-                    elif i == s_2[-1]:
-                        TC_i = 3*(s_2.count(i)-1) - 2*a_i[i] + b_i[i]
-                    else:
-                        TC_i = 3*s_2.count(i) - 2*a_i[i] + b_i[i]
-                    TC[i] = TC_i
-                
-            ## Solving the resulting inequalities for a_i
-            inequalities = []
-            for key1 in TC.keys():
-                for key2 in TC.keys():
-                    if key1 != key2:
-                        inequalities.append(-2 <= TC[key1] - TC[key2])
-                        inequalities.append(TC[key1] - TC[key2] <= 2)
-            for i in range(len(a_i)):
-                inequalities.append(a_i[i] >= 0)
-                inequalities.append(a_i[i] <= l)
-            inequalities.append(sum(a_i) == l)
-
-            a_values = dict()
-            problem = cp.Problem(cp.Minimize(0), inequalities)
-            problem.solve()
-
-            if problem.status == 'optimal':
-                for i in range(len(a_i)):
-                    a_values[i] = int(a_i[i].value)
-                break
-            l_options[l] = [u, a_values]
-                    
-        s_2 = s_2[:-1]
-        u = []
-        t = []
-        new_counts = dict()
-        for i in range(0, n):
-            new_counts[i] = 0
-        for i in s_2:
-            if new_counts[i] >= a_values[i]:
-                u[-1].append(i)
-            else:
-                t.append([i])
-                u.append([])
-            new_counts[i] += 1
-    
-        flex_s = []
-        if l%2 == 0:
-            flex_s = flex_s + E_u + [n]
-            row_count = 0
-            for i in range(l-1, -1, -1):
-                if row_count == 0:
-                    flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                    row_count = 1
-                elif row_count == 1:
-                    flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                    row_count = 0
-            flex_s = flex_s + [n+1] + [n] + [n+1]
-    
-        elif l%2 != 0:
-            flex_s = flex_s + E_u + [n]
-            row_count = 0
-            for i in range(l-1, -1, -1):
-                if row_count == 0:
-                    flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                    row_count = 1
-                elif row_count == 1:
-                    flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                    row_count = 0
-            flex_s = flex_s + [n] + [n+1] + [n]
-    
-            
-        balance = []
-        for item in set(flex_s):
-            balance.append(flex_s.count(item))
-        #print(balance)
-    
-        return flex_s
-    
-    ### if 2**(n+1) < m <= 3*(2**n) (Case II)
-    if 2**(n+1) < m <= 3*(2**n):
-        v = 3*(2**n)-m
-        intervals = [np.floor(m/(n+2)) + np.floor(v/3) -2, np.floor(m/(n+2)) + np.floor(v/3) +2]
-    
-        ## Possible l's and v's:
-        l_options = dict()
-    
-        ## l is chosen from intervals
-        for l in list(range(int(intervals[0]), int(intervals[1]) + 1)):
-            l_options[l] = computing_ab_i_odd(s_2 = s_2, l = l, v = v)
-            
-            if l_options[l][1] != {}:
-                v = l_options[l][0]
-                if v > 1:
-                    el = int(np.floor((v+1)/3))
-                    t = s_2[:el]
-                    a_i = l_options[l][1]
-                    verdict = []
-                    for item in a_i.keys():
-                        if a_i[item] != t.count(item):
-                            verdict.append('No')
-                        else:
-                            verdict.append('True')
-                    if a_i == {}:
-                        verdict.append('No')
-                        
-                    if 'No' not in verdict:
-                        u = []
-                        t = []
-                        new_counts = dict()
-                        for i in range(0, n):
-                            new_counts[i] = 0
-                        for i in s_2:
-                            if new_counts[i] >= a_values[i]:
-                                u[-1].append(i)
-                            else:
-                                t.append([i])
-                                u.append([])
-                            new_counts[i] += 1
-                        
-                        flex_s = []
-                        if l%2 == 0:
-                            row_count = 0
-                            for i in range(l-1, -1, -1):
-                                if row_count == 0:
-                                    flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                                    row_count = 1
-                                elif row_count == 1:
-                                    flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                                    row_count = 0
-                                    flex_s = flex_s + [n+1] + [n] + [n+1]
-    
-                        elif l%2 != 0:
-                            row_count = 0
-                            for i in range(l-1, -1, -1):
-                                if row_count == 0:
-                                    flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                                    row_count = 1
-                                elif row_count == 1:
-                                    flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                                    row_count = 0
-                                    flex_s = flex_s + [n] + [n+1] + [n]
-                        flex_s = flex_s[:-v] 
-                        balance = []
-                        for item in set(flex_s):
-                            balance.append(flex_s.count(item))
-                        #print(balance)
-                        return flex_s
-                    
-                    elif 'No' in verdict:
-                        new_options = dict()
-                        new_s = s_2[1:] + [s_2[0]]
-                        new_options[l] = computing_ab_i_odd(s_2 = new_s, l = l, v = v)
-                        v = new_options[l][0]
-                        if v > 1:
-                            el = int(np.floor((v+1)/3))
-                            t = new_s[:el]
-                            a_i = new_options[l][1]
-                            verdict = []
-                            for item in a_i.keys():
-                                if a_i[item] != t.count(item):
-                                    verdict.append('No')
-                                else:
-                                    verdict.append('True')
-                            if a_i == {}:
-                                verdict.append('No')
-                        
-                            if 'No' not in verdict:
-                                
-                                u = []
-                                t = []
-                                new_counts = dict()
-                                for i in range(0, n):
-                                    new_counts[i] = 0
-                                for i in s_2:
-                                    if new_counts[i] >= a_values[i]:
-                                        u[-1].append(i)
-                                    else:
-                                        t.append([i])
-                                        u.append([])
-                                    new_counts[i] += 1
-                                
-                                flex_s = []
-                                if l%2 == 0:
-                                    row_count = 0
-                                    for i in range(l-1, -1, -1):
-                                        if row_count == 0:
-                                            flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                                            row_count = 1
-                                        elif row_count == 1:
-                                            flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                                            row_count = 0
-                                            flex_s = flex_s + [n+1] + [n] + [n+1]
-    
-                                elif l%2 != 0:
-                                    row_count = 0
-                                    for i in range(l-1, -1, -1):
-                                        if row_count == 0:
-                                            flex_s = flex_s + list(reversed(u[i])) + [n+1] + u[i] + [n] + list(reversed(u[i])) + t[i]
-                                            row_count = 1
-                                        elif row_count == 1:
-                                            flex_s = flex_s + list(reversed(u[i])) + [n] + u[i] + [n+1] + list(reversed(u[i])) + t[i]
-                                            row_count = 0
-                                            flex_s = flex_s + [n] + [n+1] + [n]
-                                flex_s = flex_s[:-v]
-                                balance = []
-                                for item in set(flex_s):
-                                    balance.append(flex_s.count(item))
-                                #print(balance)
-                                return flex_s
-                            
-                            
-def gc_to_address(s_2, iters, n):
-    
-    """
-    Takes BGC transition sequence and returns BGC with particular number of 1 (iters).
-    Returns list of addresses.
-    """
-    
-    codes = [['0']*n]
-    for item in s_2:
-        n_item = codes[-1].copy()
-        if n_item[item-1] == '0':
-            n_item[item-1] = '1'
-        else:
-            n_item[item-1] = '0'
-        codes.append(n_item)
-    addresses = []
-    for item in codes:
-        if item.count('1') == iters:
-            ad = []
-            for i in range(len(item)):
-                if item[i] == '1':
-                    ad.append(i)
-            if ad not in addresses:
-                addresses.append(ad)
-    return addresses
-
-
-# # Hamiltonian path functions
+# # BBA
 
 
 def union_address(address, union, nums = None):
     
     """
-    For AU-hamiltonian path search.
-    Takes an address, a union, and a list of index options, returns possible unions.
-    Used in function(hamiltonian_path_AU), function(bAU_search).
+    Searches for suitable unions in Adj(address).
+
+    Parameters:
+    - address (str) - address
+    - union (str) - previous union in the arrangement
+    - nums (list) - list of index options
+
+    Returns:
+    - unions (list) - list of unions in Adj(address)
     """
     
     one_bits = []
@@ -622,9 +121,15 @@ def union_address(address, union, nums = None):
 def address_union(address, union, nums = None):
     
     """
-    For AU-hamiltonian path search.
-    Takes an address, a union, and a list of index options, returns possible addresses.
-    Used in function(hamiltonian_path_AU), function(bAU_search).
+    Searches for suitable addresses in Adj(union).
+
+    Parameters:
+    - address (str) - previous address
+    - union (str) - union
+    - nums (list) - list of index options
+
+    Returns:
+    - addresses (list) - list of addresses in Adj(union)
     """
     
     one_bits = []
@@ -653,70 +158,83 @@ def address_union(address, union, nums = None):
         addresses.append(''.join(new_bit))
     return addresses
 
-def hamiltonian_path_AU(size, point, t, unions=None, path=None, balance=None):
+def searchpath(n, point, t, unions=None, H=None, W_des=None):
     
     """
-    AU-hamiltonian path search.
-    Is dependent on function(union_address), function(address_union), function(variance_score), function(sum_bits).
-    Used in function(bba_au).
+    Adds a point to the arrangement, searches for next points. Recursive, core function in bba algorithm.
+
+    Parameters:
+    - n (int) - required length of the arrangement
+    - point (str) - point to add
+    - t (str) - type of the point ('a' for address, 'u' for union)
+    - unions (list) - unions in the arrangement
+    - H (list) - addresses in the arrangement
+    - W_des (list) - desired balance for the arrangement, optional
+
+    Returns:
+    - res_H (list) - resulting arrangement of the length n
     """
     
-    if path is None:
-        path = []
+    if H is None:
+        H = []
     if unions is None:
         unions = []
     
     if t == 'a':
-        if point not in set(path):
-            path.append(point)
-            if len(path) == size:
-                return path
-            next_points = union_address(address=path[-1], union=unions[-1] if unions else None)
-            next_points.sort(key=lambda s: (variance_score(sum_bits(path), s, balance), random.random()))
+        if point not in set(H):
+            H.append(point)
+            if len(H) == n:
+                return H
+            next_points = union_address(address=H[-1], union=unions[-1] if unions else None)
+            next_points.sort(key=lambda s: (variance_score(sum_bits(H), s, W_des), random.random()))
             for nxt in next_points:
-                res_path = hamiltonian_path_AU(size, nxt, 'u', unions, path, balance)
-                if res_path:
-                    return res_path
-            path.remove(point)
+                res_H = searchpath(n, nxt, 'u', unions, H, W_des)
+                if res_H:
+                    return res_H
+            H.remove(point)
         else:
             return None
         
     elif t == 'u':
         if point not in set(unions):
             unions.append(point)
-            next_points = address_union(address=path[-1], union=unions[-1] if unions else None)
-            next_points.sort(key=lambda s: (variance_score(sum_bits(path), s, balance), random.random()))
+            next_points = address_union(address=H[-1], union=unions[-1] if unions else None)
+            next_points.sort(key=lambda s: (variance_score(sum_bits(H), s, W_des), random.random()))
             for nxt in next_points:
-                res_path = hamiltonian_path_AU(size, nxt, 'a', unions, path, balance)
-                if res_path:
-                    return res_path   
+                res_H = searchpath(n, nxt, 'a', unions, H, W_des)
+                if res_H:
+                    return res_H   
             unions.remove(point)
         else:
             return None
     return None
 
-def variance_score(bit_sums, s, balance = None):
+def variance_score(bit_sums, s, W_des = None):
     
     """
-    For both versions of Hamiltonian path search.
-    Takes an address (or union), measures how it influences the balance in path is being added.
-    Returns penalty: difference between variance of balance before and after or between required balance and after.
-    Is dependent on function(bit_sums).
-    Used in function(bba_au), function(bba_a)
+    Calculates penalty for the point based on how much less balanced the arrangement becomes after it is added.
+
+    Parameters:
+    - bit_sums (list) - current balance of the arrangement
+    - s (string) - point to add
+    - W_des (list) - desired balance, optional
+
+    Returns:
+    - penalty (float) - calculated penalty
     """
     
-    if balance is None:
+    if W_des is None:
         variance = np.var(bit_sums)
 
     new_bit_sums = bit_sums[:]
     for i, bit in enumerate(s):
         new_bit_sums[i] += int(bit)
 
-    if balance is None:
+    if W_des is None:
         new_variance = np.var(new_bit_sums)
         penalty = new_variance - variance
     else:
-        diff = np.array(balance) - np.array(new_bit_sums)
+        diff = np.array(W_des) - np.array(new_bit_sums)
         penalty = np.var(diff)
 
     return penalty
@@ -724,10 +242,16 @@ def variance_score(bit_sums, s, balance = None):
 def return_address_message(code, mode):
     
     """
-    For A-hamiltonian path search.
-    Takes an address and returns message (0/1 string).
-    Or takes a message and returns an address.
-    Used in function(binary_union), function(bAU_search).
+    Transforms index form of the address into binary form or back.
+
+    Parameters:
+    - code (list or str) - address
+    - mode (str) - form of the address ('a' if index form, 'mN' if binary form, where N represents number of pools)
+
+    Returns:
+    - address - index form of the address
+    or
+    - message - binary form of the address
     """
     
     if mode == 'a':
@@ -745,44 +269,17 @@ def return_address_message(code, mode):
             else:
                 message = message + '0'
         return message
-    
-def binary_union(bin_list):
-    
-    """
-    For A-hamiltonian path search.
-    Takes list of addresses, returns list of their unions.
-    Is dependent on function(return_address_message).
-    Used in function(hamiltonian_path_A).
-    """
-    
-    union_list = []
-    for i in range(len(bin_list)-1):
-        
-        set1 = set(return_address_message(bin_list[i], mode = 'a'))
-        set2 = set(return_address_message(bin_list[i+1], mode = 'a'))
-        set_union = set1.union(set2)
-        union = return_address_message(set_union, mode = 'm'+str(len(bin_list[i])))
-        union_list.append(union)
-    
-    return union_list
-
-def hamming_distance(s1, s2):
-    
-    """
-    For A-hamiltonian path search.
-    Takes two messages (0/1 string) and returns their Hamming distance.
-    Used in function(bba_a).
-    """
-    
-    return sum(el1 != el2 for el1, el2 in zip(s1, s2))
 
 def sum_bits(arr):
     
     """
-    For both versions of hamiltonian path search.
-    Takes list of addresses and returns their balance.
-    Used in function(bba_a), function(bba_au),
-    function(hamiltonian_path_A), function(hamiltonian_path_AU).
+    Calculates balance of the arrangement in the binary form.
+
+    Paremeters:
+    - arr (list) - the arrangement
+
+    Returns:
+    - bit_sums (list) - balance of the arrangement
     """
     
     bit_sums = [0]*len(arr[0])
@@ -792,46 +289,28 @@ def sum_bits(arr):
             bit_sums[i] += int(bit)
     return bit_sums
 
-def hamiltonian_path_A(G, size, pt, path=None):
-    
-    """
-    A-hamiltonian path search.
-    Is dependent on function(binary_union), function(variance_score), function(sum_bits).
-    Used in function(bba_a).
-    """
-
-    if path is None:
-        path = []
-    if (pt not in set(path)) and (len(binary_union(path+[pt]))==len(set(binary_union(path+[pt])))):
-        path.append(pt)
-        if len(path)==size:
-            return path
-        next_points = G.get(pt, [])
-        next_points.sort(key=lambda s: (variance_score(sum_bits(path), s), random.random()))
-        for pt_next in next_points:
-            res_path = hamiltonian_path_A(G, size, pt_next, path)
-            if res_path:
-                return res_path
-        path.remove(pt)
-    return None
-
-def starts(n_pools, iters, start = None):
+def starts(m, r, start = None):
 
     """
-    For AU-hamiltonian path search.
-    Takes number of pools, number of pools per peptide, and (optionally) first address,
-    returns a dictionary with possible first addresses and unions.
-    Used in function(bba_au).
+    Finds possible pairs of the first address and the first unions based on the number of pools m and address weight r.
+
+    Parameters:
+    - m (int) - number of pools in the arrangement
+    - r (int) - address weight in the arrangement, i.e. to how many pools one item is added
+    - start (str) - desired first address, optional
+
+    Returns:
+    - starts (dict) - possible pairs of addresses and unions
     """
 
     starts = dict()
-    positions = range(n_pools)
-    for ones_positions in combinations(positions, iters):
-        ad = ['0'] * n_pools
+    positions = range(m)
+    for ones_positions in combinations(positions, r):
+        ad = ['0'] * m
         for pos in ones_positions:
             ad[pos] = '1'
         start_a = ''.join(ad)
-        zeros = [x for x in range(n_pools) if x not in ones_positions]
+        zeros = [x for x in range(m) if x not in ones_positions]
         start_u = []
         for zero in zeros:
             u = ''.join(['1' if i == zero else char for i, char in enumerate(start_a)])
@@ -842,40 +321,48 @@ def starts(n_pools, iters, start = None):
     else:
         return {start: starts[start]}
 
-def bba_au(n_pools, iters, len_lst, start_a = None, balance = None):
+def bba(m, r, n, start_a = None, W_des = None):
     
     """
-    For AU-hamiltonian path search.
-    Takes number of pools, number of pools per peptide, length of the path, (optionally) starting address and required balance.
-    Returns balance of the path and list of addresses.
-    Is dependent on function(hamiltonian_path_AU), function(sum_bits), and function(starts).
-    Used in function(reccom), function(gen_elementary_sequence).
+    Searches for the arrangement of length n, with m pools, r address weight using BBA algorithm.
+    Optionally can take into account desired first address and desired balance of the arrangement.
+
+    Parameters:
+    - m (int) - number of pools
+    - r (int) - address weight, i.e. to how many pools one item is added
+    - n (int) - number of items
+    - start_a (str) - desired first address of the arrangement, optional
+    - W_des (list) - desired balance for the resulting arrangement
+
+    Returns:
+    - balance (list) - resulting balance of the arrangement
+    - H - resulting arrangement
     """
 
-    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+    if math.comb(m, r) <= n or math.comb(m, r+1) <= n:
         return [None, None]
 
-    depth = len_lst*2+500
+    depth = n*2+500
     sys.setrecursionlimit(depth)
 
     ## First address and first union
     if start_a is None:
-        starting = starts(n_pools, iters)
+        starting = starts(m, r)
     else:
-        starting = starts(n_pools, iters, start_a)
+        starting = starts(m, r, start_a)
     arrangement = False
 
     for start_a in starting.keys():
-        path = [start_a]
-        if len(path) != len_lst:
+        H = [start_a]
+        if len(H) != n:
             for start_u in starting[start_a]:
-                arrangement = hamiltonian_path_AU(size=len_lst, point = start_u, t = 'u', unions = None, path = [start_a], balance=balance)
+                arrangement = searchpath(n=n, point = start_u, t = 'u', unions = None, H = [start_a], W_des=W_des)
                 if arrangement:
                     break
             if arrangement:
                 break
         else:
-            arrangement = path
+            arrangement = H
             break
 
     if arrangement:
@@ -890,60 +377,23 @@ def bba_au(n_pools, iters, len_lst, start_a = None, balance = None):
         return sum_bits(arrangement), addresses
     return [None, None]
 
-def bba_a(n_pools, iters, len_lst):
+
+# # RCA and rcBBA
+
+def item_per_pool(addresses, m):
     
     """
-    For A-hamiltonian path search.
-    Takes number of pools, iters, and length of the path.
-    Returns balance of the path and list of addresses.
-    Is dependent on function(hamiltonian_path_A) and function(sum_bits).
-    """
-    
-    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
-        return [None, None]
+    Calculates balance of the matrix form of the arrangement.
 
-    depth = len_lst*2+500
-    sys.setrecursionlimit(depth)
+    Parameters:
+    - addresses (numpy array) - the arrangement
+    - m (int) - number of pools
 
-    vertices = []
-    for combo in combinations(range(n_pools), iters):
-        v = ['0']*n_pools
-        for i in combo:
-            v[i] = '1'
-        vertices.append(''.join(v))
-        
-    G = {v: [] for v in vertices}
-    for v1 in vertices:
-        for v2 in vertices:
-            if hamming_distance(v1, v2) == 2:
-                G[v1].append(v2)
-            
-    arrangement = hamiltonian_path_A(G, len_lst, vertices[0])
-    
-    addresses = []
-    if arrangement:
-        for item in arrangement:
-            address = []
-            for i in range(len(item)):
-                if item[i] == '1':
-                    address.append(i)
-            addresses.append(address)
-        return sum_bits(arrangement), addresses
-    else:
-        return [None, None]
-
-# # RCA
-
-def item_per_pool(addresses, n):
-    
-    """
-    For RCA and RCA_AU path search.
-    Takes matrix of addresses and number of pools.
-    Returns the balance.
-    Used in function(rca), function(reccom), function(rcau).
+    Returns:
+    - balance (numpy array) - balance of the arrangement
     """
 
-    balance = [0]*n
+    balance = [0]*m
     for line in addresses:
         for i in line:
             balance[i]+=1
@@ -968,9 +418,13 @@ def find_path(n, X, directory):
 def list_union(address_matrix):
     
     """
-    For RCA and RCA_AU path search.
-    Takes matrix of addresses, returns the union matrix.
-    Used in function(bAU_search), function(isGrayUnionDisjoint).
+    Based on the matrix of addresses, calculates matrix of unions of adjacent addresses.
+
+    Parameters:
+    - address_matrix (numpy array) - matrix with addresses
+
+    Returns:
+    - union_matrix (numpy array) - matrix with unions
     """
     
     address_matrix = address_matrix.tolist()
@@ -993,26 +447,30 @@ def set_distance(set1, set2):
     return a.size
 
 
-def bAU_search(address_matrix, n_pools, nums):
+def bAU_search(address_matrix, m, I_res):
 
     """
-    For RCA and RCA_AU path search.
-    Takes an address matrix, number of pools, and possible indices.
-    Returns possible first addresses for an elementary sequence.
-    Is dependent on function(return_address_message), function(list_union), function(union_address), function(address_union).
-    Used in function(rca), function(reccom).
+    Searches for possible first addresses of an elementary sequence (b).
+    
+    Parameters:
+    - address matrix (numpy array) - matrix with addresses
+    - m (int) - number of pools
+    - I_res (list) - residual index set
+
+    Returns:
+    - bs (list of lists) - list of possible b's
     """
 
-    ad1 = return_address_message(list(address_matrix[0]), 'm'+str(n_pools))
-    un1 = return_address_message(list(np.union1d(address_matrix[0], address_matrix[1])), 'm'+str(n_pools))
+    ad1 = return_address_message(list(address_matrix[0]), 'm'+str(m))
+    un1 = return_address_message(list(np.union1d(address_matrix[0], address_matrix[1])), 'm'+str(m))
     union_matrix = list_union(address_matrix)
-    b_unions = union_address(ad1, un1, nums)
+    b_unions = union_address(ad1, un1, I_res)
     bs = np.empty((0, len(address_matrix[0])), dtype='int')
     
     for b_union in b_unions:
         union = return_address_message(b_union, 'a')
         if not any(np.array_equal(np.array(union), row) for row in union_matrix):
-            addresses = address_union(ad1, b_union, nums)
+            addresses = address_union(ad1, b_union, I_res)
             for address in addresses:
                 address = return_address_message(address, 'a')
                 if not any(np.array_equal(np.array(address), row) for row in address_matrix):
@@ -1021,24 +479,29 @@ def bAU_search(address_matrix, n_pools, nums):
     return bs
 
 
-def permutation_map(address_matrix, k, b, n, nums, p=-1):
+def permutation_map(address_matrix, k, b, m, I_res, p=-1):
     
     """
-    For RCA_AU path search.
-    Finds a permutation map such that the k-th address of
-    address_matrix is mapped one-by-one to b, and n is mapped to p.
-    Takes address_matrix, row index k, target address b,
-    and set of indices from which b values are chosen.
-    Returns the permuted matrix.
-    Is dependent on fuction(rca), function(reccom).
-    """
-    
-    r, iters = address_matrix.shape
-    permuted_address_matrix=np.zeros((r,iters),dtype='int')
+    Permutes addresses using found permutatation map, such that
+    the k-th address of an address_matrix is mapped one-by-one to b, and m is mapped to p.
 
-    a = address_matrix[k]
+    Parameters:
+    - address matrix (numpy array) - matrix with addresses
+    - k (int) - row index
+    - b (list) - target address
+    - m (int) - number of pools
+    - I_res - residual index set
+
+    Returns:
+    - permuted_address_matrix (numpy array) - matrix with addresses permuted acccording to found map
+    """
+    
+    n, r = address_matrix.shape
+    permuted_address_matrix=np.zeros((n,r),dtype='int')
+
     perm_vec = dict()
     
+    a = address_matrix[k]
     perm_vec[a[-1]] = b[p]
 
     a1 = np.setdiff1d(a, a[-1])
@@ -1048,13 +511,13 @@ def permutation_map(address_matrix, k, b, n, nums, p=-1):
         perm_vec[a1[l]] = b1[l]
 
     map_row1 = np.setdiff1d(np.unique(address_matrix.flatten()), a)
-    map_row2 = np.setdiff1d(nums, b)
+    map_row2 = np.setdiff1d(I_res, b)
 
     for l in range(len(map_row1)):
         perm_vec[map_row1[l]] = map_row2[l]
 
-    for l in range(r):
-        for j in range(iters):
+    for l in range(n):
+        for j in range(r):
             permuted_address_matrix[l, j] = perm_vec[address_matrix[l, j]]
         permuted_address_matrix[l] = np.sort(permuted_address_matrix[l])
     return permuted_address_matrix
@@ -1131,7 +594,7 @@ def rca(n_pools, iters, len_lst):
 
 
         # ite = n-2 level traverse 
-        bs = bAU_search(S_out, len(weights0), nums) 
+        bs = bAU_search(S_out, len(weights0), nums)
         bs_diff = np.setdiff1d(bs, S_out[0, :]) 
         weights_selected=weights[bs_diff]
         row2 = np.argmax(weights_selected)
@@ -1257,40 +720,53 @@ def rca(n_pools, iters, len_lst):
     return balance, S_out_out
 
 
-def gen_elementary_sequence(n, iters, nums, m, b = None):
+def gen_elementary_sequence(m, r, I_res, w, b = None):
     
     """
-    For RCA_AU path search.
-    Finds a balanced sequence via BBA_AU, and applies augmentation to generate the AES.
-    Takes number of pools, number of pools per peptide, set of possible indices, the required path length, and the last address b.
-    Returns the augemented (permuted) elementary sequence.
-    Is dependent on function(bba_au), function(permutation_map).
-    Used in function(reccom).
+    Generates component to add to the arrangement: augments and permutes elementary sequence generated by BBA.
+
+    Parameters:
+    - m (int) - number of pools
+    - r (int) - address weight, i.e. number of pools to which one item is added
+    - I_res (list) - residual index set
+    - w (int) - required length of the component
+    - b (list) - required first address of the permuted sequence, optional
+
+    Returns:
+    - H (numpy array) - generated component
+    - I_res (list) - updated residual index set
     """
-    _, A = bba_au(n - 1, iters - 1, m)
+    _, A = bba(m - 1, r - 1, w)
     
     if A:
-        B = np.array([[n-1]]*m)
-        S = np.concatenate([A, B], axis=1)
+        B = np.array([[m-1]]*w)
+        H = np.concatenate([A, B], axis=1)
         if b is None:
-            cleared_nums = np.array([n - 1])
-            nums = np.setdiff1d(nums, cleared_nums)
-            return  S, nums
+            cleared_I_res = np.array([m - 1])
+            I_res = np.setdiff1d(I_res, cleared_I_res)
+            return H, I_res
         else:
-            S = permutation_map(S, -1, b, n, nums)
-            cleared_nums = np.array([b[-1]])
-            nums = np.setdiff1d(nums, cleared_nums)
-            return  S, nums
+            H = permutation_map(H, -1, b, m, I_res)
+            cleared_I_res = np.array([b[-1]])
+            I_res = np.setdiff1d(I_res, cleared_I_res)
+            return H, I_res
     else:
         return [None, None]
 
 
-def permute(start, b, n, nums):
+def permute(start, b, m, I_res):
 
     """
-    For RCA_AU path search.
-    Takes last address for a sequence, permuted version of this address, and returns permutation map.
-    Used in function(reccom).
+    Finds permutation map to get b from start.
+
+    Parameters:
+    - start (list) - an address that needs to be permuted
+    - b (list) - target address, i.e. how start should look like after the permutation
+    - m (int) - number of pools
+    - I_res (list) - available residual index set for the permutation map
+
+    Returns:
+    - perm_vec (dict) - permutation map
     """
 
     perm_vec = dict()
@@ -1302,8 +778,8 @@ def permute(start, b, n, nums):
     for l in range(len(a1)):
         perm_vec[a1[l]] = b1[l]
 
-    map_row1 = np.setdiff1d(np.array(range(n)), start)
-    map_row2 = np.setdiff1d(nums, b)
+    map_row1 = np.setdiff1d(np.array(range(m)), start)
+    map_row2 = np.setdiff1d(I_res, b)
 
     for l in range(len(map_row1)):
         perm_vec[map_row1[l]] = map_row2[l]
@@ -1314,9 +790,13 @@ def permute(start, b, n, nums):
 def balancing_weights(arr):
 
     """
-    For RCA_AU path search.
-    Takes weights of the arrangement, returns necessary balance by taking care of 0's and negative numbers.
-    Used in function(AU_balance).
+    Cleans residual balance vector before applying a permutation map to find W_des for the last rcBBA iteration.
+
+    Parameters:
+    - arr (numpy array) - residual balance vector
+
+    Returns:
+    - arr (numpy array) - residual balance vector without negative numbers
     """
 
     for i in range(len(arr)):
@@ -1331,11 +811,14 @@ def balancing_weights(arr):
 def AU_balance(new_weights, perm_vec):
 
     """
-    For RCA_AU path search.
-    Takes weights of the arrangement and a permutation map.
-    Returns permuted weights (balance for BBA_AU search step).
-    Is dependent on function(balancing_weights).
-    Used in function(reccom).
+    Calculates W_des (balance) for the last rcBBA iteration.
+
+    Parameters:
+    - new_wights (numpy array) - residual balance vector
+    - perm_vec (dict) - permutation map
+    
+    Returns:
+    - bal (numpy array) - permuted residual balance vector
     """
 
     new_weights = balancing_weights(new_weights)
@@ -1352,117 +835,127 @@ def AU_balance(new_weights, perm_vec):
     return bal
 
 
-def reccom(n, iters, len_lst, nums, weights, w_check = None, S=None):
+def reccom(j, r, n, I_res, weights, w_check = None, H=None):
 
     """
-    RCA_AU path search.
-    Takes number of pools, number of pools per peptide, the length of the required arrangement, set of possible indices, balance, overall balance, and previous address matrix.
-    Returns matrix of addresses.
-    Is dependent on function(gen_elementary_sequence), function(item_per_pool), function(permute), function(AU_balance),
-    function(bba_au), function(bAU_search), function(permutation_map).
+    Adds component to the arrangement, searches for next component. Recursive, core function in rcbba algorithm.
+
+    Parameters:
+    - j (int) - number of pools, iteration counter
+    - r (int) - address weight, i.e. to how many pools one item is added
+    - n (int) - number of items
+    - I_res (list) - residual index set
+    - weights (numpy array) - residual balance vector
+    - w_check (numpy array) - residual balance vector before adding next component
+    - H (numpy array) - arrangement
+
+    Returns:
+    - H (numpy array) - arrangement with added next component
     """
 
-    if S is None:
-        m = weights[-1]
-        S, nums = gen_elementary_sequence(n, iters, nums, m, b = None)
-        if S is None:
+    if H is None:
+        w = weights[-1]
+        H, I_res = gen_elementary_sequence(j, r, I_res, w, b = None)
+        if H is None:
             return None
-        w_check = item_per_pool(S, len(weights))
+        w_check = item_per_pool(H, len(weights))
         
-    n_pools = len(weights)
+    m_pools = len(weights)
+    
     # balance in the arrangement
     new_weights = weights - w_check
-    #bs = b_search(S, iters, nums)
-    bs = bAU_search(S, n_pools, nums)
-    # if b was found
-    #if len(bs) > 0:
+    bs = bAU_search(H, m_pools, I_res)
     b_weights = dict()
     for b in bs:
         b_weights[tuple(b)] = new_weights[b[-1]]
     b_weights = {k: v for k, v in sorted(b_weights.items(), key=lambda item: item[1], reverse=False)}
             
-    # n_pools reduction
-    n = n - 1
+    # j iteration
+    j = j - 1
 
     # last elementary sequence
-    if math.comb(n-1, iters) < math.comb(n-1, iters-1)+1:
-        left = len_lst - len(S)
+    if math.comb(j-1, r) < math.comb(j-1, r-1)+1:
+        left = n - len(H)
         for b in b_weights.keys():
                 
             # calculating balance for BBA_AU
-            start_a = ''.join(['1']*iters + ['0']*(n-iters))
-            perm_vec = permute(list(range(iters)), b, n, nums)
-            bal_for_AU = AU_balance(new_weights, perm_vec)
+            start_a = ''.join(['1']*r + ['0']*(j-r))
+            perm_vec = permute(list(range(r)), b, j, I_res)
+            W_des = AU_balance(new_weights, perm_vec)
             # search for the arrangement with needed balance
-            _, A = bba_au(n, iters, left, start_a, bal_for_AU)
+            _, A = bba(j, r, left, start_a, W_des)
             
             if A is not None:
                 A = np.array(A, dtype = 'int')
-                S_j = permutation_map(A[::-1], -1, b, n, nums)
-                if S_j is not None:
-                    S_new = np.concatenate([S_j, S], axis=0)
+                H_j = permutation_map(A[::-1], -1, b, j, I_res)
+                if H_j is not None:
+                    H_new = np.concatenate([H_j, H], axis=0)
                         
-                    return S_new
+                    return H_new
 
     # for each b
     for b in b_weights.keys():
-        m = b_weights[b]
-        av_ad = math.comb(n-1, iters-1)
-        av_un = math.comb(n-1, iters)
+        w = b_weights[b]
+        av_ad = math.comb(j-1, r-1)
+        av_un = math.comb(j-1, r)
         # if AU arrangement can be found
-        if m > 0 and m < av_un and av_ad - m > 1:
-            #if m is bigger than needed
-            if m > len_lst-len(S):
-                m = len_lst-len(S)
-            S_j, nums_new = gen_elementary_sequence(n, iters, nums, m, b)
-            if S_j is not None:
-                w_check = item_per_pool(S_j, len(weights))
-                S_new = np.concatenate([S_j, S], axis=0)
+        if w > 0 and w < av_un and av_ad - w > 1:
+            #if w is bigger than needed
+            if w > n-len(H):
+                w = n-len(H)
+            H_j, I_res_new = gen_elementary_sequence(j, r, I_res, w, b)
+            if H_j is not None:
+                w_check = item_per_pool(H_j, len(weights))
+                H_new = np.concatenate([H_j, H], axis=0)
 
-                if len(S_new) == len_lst:
-                    return S_new
+                if len(H_new) == n:
+                    return H_new
 
                 # if arrangement needs only one next element
-                elif len_lst-len(S_new) == 1:
-                    end = bAU_search(S_new, n_pools, nums_new)
-                    #end = b_search(S_new, iters, nums_new)
+                elif n-len(H_new) == 1:
+                    end = bAU_search(H_new, m_pools, I_res_new)
                     if len(end)>0:
-                        b_S = np.concatenate([[end[0]], S_new], axis=0)
-                        return b_S
+                        b_H = np.concatenate([[end[0]], H_new], axis=0)
+                        return b_H
             
                 else:
-                    res_path = reccom(n, iters, len_lst, nums_new, new_weights, w_check, S_new)
-                    if res_path is not None:
-                        return res_path
+                    res_H = reccom(j, r, n, I_res_new, new_weights, w_check, H_new)
+                    if res_H is not None:
+                        return res_H
 
 
-def rcau(n_pools, iters, len_lst):
+def rcbba(m, r, n):
 
     """
-    For RCA_AU path search.
-    Takes number of pools, number of pools per peptide, and the length of the required arrangement.
-    Returns the arrangement.
-    Is dependent on function(item_per_pool), function(reccom).
-    
+    Searches for the arrangement of length n, with m pools, r address weight using rcBBA algorithm.
+
+    Parameters:
+    - m (int) - number of pools
+    - r (int) - address weight, i.e. to how many pools one item is added
+    - n (int) - number of items
+
+    Returns:
+    - balance (list) - resulting balance of the arrangement
+    - H - resulting arrangement
     """
 
     ## if there are enough addresses and unions
-    if math.comb(n_pools, iters) <= len_lst or math.comb(n_pools, iters+1) <= len_lst:
+    if math.comb(m, r) <= n or math.comb(m, r+1) <= n:
         return [None, None]
     
-    w=math.floor(iters*len_lst/n_pools)
-    weights = w * np.ones((n_pools,), dtype='int')
-    delta = len_lst * iters - w * n_pools
+    w=math.floor(r*n/m)
+    weights = w * np.ones((m,), dtype='int')
+    delta = n * r - w * m
     weights[:delta] += 1
 
-    nums = np.arange(0, n_pools)
-    bs0 =  np.array(list(combinations(nums, iters)))
+    I_res = np.arange(0, m)
+    bs0 =  np.array(list(combinations(I_res, r)))
         
-    S = reccom(n_pools, iters, len_lst, nums, weights, w_check = None, S=None)
-    if S is not None:
-        balance = item_per_pool(S, n_pools)
-        S = [arr.tolist() for arr in S]
-        return balance, S
+    H = reccom(m, r, n, I_res, weights, w_check = None, H=None)
+    if H is not None:
+        balance = item_per_pool(H, m)
+        H = [arr.tolist() for arr in H]
+        return balance, H
     else:
         return [None, None]
 
@@ -1472,9 +965,14 @@ def rcau(n_pools, iters, len_lst):
 def check_unique(lists):
 
     """
-    To check constraints.
-    Takes address matrix, returns a list. list[0] == TRUE if addresses are unique, list[1] == TRUE if unions are unique.
-    
+    Checks whether an arrangement satisfies all the constraints.
+
+    Parameters:
+    - lists (list) - arrangement
+
+    Returns:
+    - [all_lists_unique, all_unions_unique] ([Boolean, Boolean]) - the result of the check,
+    whether addresses are unique and whether unions are unique
     """
 
     unique_lists = [list(l) for l in set(tuple(l) for l in lists)]
