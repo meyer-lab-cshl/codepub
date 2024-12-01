@@ -38,7 +38,7 @@ To construct balanced DCP-CWGCs with adjustable parameters, we developed a **bra
 
 A DCP-CWGC, denoted as \( (m, r, n) \), is a sequence of \( n \) distinct binary addresses, \( C = \{a_1, a_2, \dots, a_n\} \), where each address \( a_j = (a_{j,1}, a_{j,2}, \dots, a_{j,m}) \) satisfies the following constraints:
 
-1. **Distinct OR-sums**:
+1. **Distinct OR-sums**:  
    For all \( j, k \in \{1, 2, \dots, n-1\} \) and \( j \neq k \):
 
    \[
@@ -47,14 +47,14 @@ A DCP-CWGC, denoted as \( (m, r, n) \), is a sequence of \( n \) distinct binary
 
    where \( \vee \) is the bitwise OR operation.
 
-2. **Constant weight**:
+2. **Constant weight**:  
    For all \( j \in \{1, 2, \dots, n\} \):
 
    \[
    \sum_{i=1}^m a_{j,i} = r.
    \]
 
-3. **Adjacent distance**:
+3. **Adjacent distance**:  
    For all \( j \in \{1, 2, \dots, n-1\} \):
 
    \[
