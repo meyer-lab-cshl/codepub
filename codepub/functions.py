@@ -852,13 +852,20 @@ def reccom(j, r, n, I_res, weights, w_check = None, H=None):
     Returns:
     - H (numpy array) - arrangement with added next component
     """
-
+    
     if H is None:
-        w = weights[-1]
-        H, I_res = gen_elementary_sequence(j, r, I_res, w, b = None)
-        if H is None:
-            return None
-        w_check = item_per_pool(H, len(weights))
+        m_0_check = math.comb(j-1, r) < math.comb(j-1, r-1)+1
+        if m_0_check:
+            _, H_new = bba(j, r, n, W_des = list(weights))
+            if H_new is not None:
+                H_new = np.array(H_new, dtype = 'int')
+                return H_new
+        else:
+            w = weights[-1]
+            H, I_res = gen_elementary_sequence(j, r, I_res, w, b = None)
+            if H is None:
+                return None
+            w_check = item_per_pool(H, len(weights))
         
     m_pools = len(weights)
     

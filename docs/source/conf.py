@@ -22,8 +22,8 @@ copyright = '2023, Vasilisa Kovaleva, Guanchen He'
 author = '2023, Vasilisa Kovaleva, Guanchen He'
 
 # The full version, including alpha/beta/rc tags
-version = '2.0'
-release = '2.0'
+version = '2.1'
+release = '2.1'
 
 # -- General configuration ---------------------------------------------------
 
