@@ -36,32 +36,26 @@ To construct balanced DCP-CWGCs with adjustable parameters, we developed a **bra
 
 ## Definition of DCP-CWGCs
 
-A DCP-CWGC, denoted as \( (m, r, n) \), is a sequence of \( n \) distinct binary addresses, \( C = \{a_1, a_2, \dots, a_n\} \), where each address \( a_j = (a_{j,1}, a_{j,2}, \dots, a_{j,m}) \) satisfies the following constraints:
+A DCP-CWGC, denoted as `(m, r, n)`, is a sequence of `n` distinct binary addresses, `C = {a_1, a_2, ..., a_n}`, where each address `a_j = (a_{j,1}, a_{j,2}, ..., a_{j,m})` satisfies the following constraints:
 
 1. **Distinct OR-sums**:  
-   For all \( j, k \in \{1, 2, \dots, n-1\} \) and \( j \neq k \):
+   For all `j, k ∈ {1, 2, ..., n-1}` and `j ≠ k`:
 
-   \[
-   a_j \vee a_{j+1} \neq a_k \vee a_{k+1},
-   \]
+   `a_j ∨ a_{j+1} ≠ a_k ∨ a_{k+1}`
 
-   where \( \vee \) is the bitwise OR operation.
+   where `∨` is the bitwise OR operation.
 
 2. **Constant weight**:  
-   For all \( j \in \{1, 2, \dots, n\} \):
+   For all `j ∈ {1, 2, ..., n}`:
 
-   \[
-   \sum_{i=1}^m a_{j,i} = r.
-   \]
+   `∑{i=1}^m a{j,i} = r`
 
 3. **Adjacent distance**:  
-   For all \( j \in \{1, 2, \dots, n-1\} \):
+   For all `j ∈ {1, 2, ..., n-1}`:
 
-   \[
-   D_H(a_j, a_{j+1}) = 2,
-   \]
+   `D_H(a_j, a_{j+1}) = 2`
 
-   where \( D_H \) represents the Hamming distance.
+   where `D_H` represents the Hamming distance.
 
 ---
 
